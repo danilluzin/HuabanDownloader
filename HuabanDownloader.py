@@ -1,9 +1,11 @@
 ##
 
-DEBUG = False 
+DEBUG = True
+# DEBUG = False 
+
 # EXAMPLE_URL = 'https://huaban.com/boards/37528906/' #hair
-EXAMPLE_URL = 'https://huaban.com/boards/48685125/' #mood
-# EXAMPLE_URL = 'https://huaban.com/boards/31714128/' #art
+# EXAMPLE_URL = 'https://huaban.com/boards/48685125/' #mood
+EXAMPLE_URL = 'https://huaban.com/boards/31714128/' #art
 HTML_ENCODING = 'utf8'
 IMAGE_DIR = 'huaban'
 
@@ -70,13 +72,15 @@ class Pin:
         self.pinID = _pinID
         self.src = _src
 
+FAILED_PINS = []
 
 def extendPinList(html,pins):
     print("Collecting pin info...")
     pinPattern = r'<a href="/pins/([0-9]*)/" .*?<img src="//(.*?)" width'
     matchList = re.findall(pinPattern,html)
     for pinId, src in matchList:
-        src = "http://" + src.replace("hbimg.huabanimg.com","img.hb.aicdn.com").replace("_fw236","")
+        src = "http://" + src.replace("hbimg.huabanimg.com","img.hb.aicdn.com") 
+        src = re.sub("_fw[0-9]*$","",src) #size toke removal
         pins.append(Pin(pinId,src))
 
     print("Got more "+str(len(matchList))+" pins")
@@ -98,7 +102,7 @@ def getImage (url, filename, pinID):
     attempts = 10
     while not done:
         try:
-            request = requests.get(url, timeout=10, stream=True)
+            request = requests.get(url, timeout=1, stream=True)
             with open(filename, 'wb') as fh:
                 for chunk in request.iter_content(1024 * 1024):
                     fh.write(chunk)
@@ -109,6 +113,7 @@ def getImage (url, filename, pinID):
             attempts = attempts - 1
             if attempts==0 :
                 print("FAILED pin " + str(pinID))
+                FAILED_PINS.append((pinID,url))
                 if os.path.exists(filename):
                     os.remove(filename)
                 return;
@@ -146,6 +151,12 @@ def main():
         # urlretrieve(p.src,path)
 
     print("Done!")
+    if(len(FAILED_PINS)>0):
+        f= open(IMAGE_DIR+'/'+boardName+'/'+"failReport.txt","w+")
+        for fail in FAILED_PINS:
+            f.write(str(fail[0]) + " : " + fail[1])
+        f.close
+
 
 if __name__ == '__main__':
     main()
