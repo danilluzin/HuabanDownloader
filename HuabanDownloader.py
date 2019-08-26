@@ -109,6 +109,8 @@ def getImage (url, filename, pinID):
             attempts = attempts - 1
             if attempts==0 :
                 print("FAILED pin " + str(pinID))
+                if os.path.exists(filename):
+                    os.remove(filename)
                 return;
        
 
