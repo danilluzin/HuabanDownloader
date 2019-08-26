@@ -1,11 +1,11 @@
 ##
 
-DEBUG = True
-# DEBUG = False 
+# DEBUG = True
+DEBUG = False 
 
-# EXAMPLE_URL = 'https://huaban.com/boards/37528906/' #hair
+EXAMPLE_URL = 'https://huaban.com/boards/37528906/' #hair
 # EXAMPLE_URL = 'https://huaban.com/boards/48685125/' #mood
-EXAMPLE_URL = 'https://huaban.com/boards/31714128/' #art
+# EXAMPLE_URL = 'https://huaban.com/boards/31714128/' #art
 HTML_ENCODING = 'utf8'
 IMAGE_DIR = 'huaban'
 
@@ -152,11 +152,9 @@ def main():
 
     print("Done!")
     if(len(FAILED_PINS)>0):
-        f= open(IMAGE_DIR+'/'+boardName+'/'+"failReport.txt","w+")
-        for fail in FAILED_PINS:
-            f.write(str(fail[0]) + " : " + fail[1])
-        f.close
-
+        with open(IMAGE_DIR+'/'+boardName+'/'+"failReport.txt", 'w') as file:
+            for fail in FAILED_PINS:
+                file.write(str(fail[0]) + ' : ' + fail[1]+'\n')
 
 if __name__ == '__main__':
     main()
