@@ -1,9 +1,11 @@
 ##
 
 DEBUG = True 
-EXAMPLE_URL = 'https://huaban.com/boards/37528906/' #示例网址
-# EXAMPLE_URL = 'https://huaban.com/boards/42010879/'
+EXAMPLE_URL = 'https://huaban.com/boards/37528906/' #hair
+# EXAMPLE_URL = 'https://huaban.com/boards/48685125/' #mood
+# EXAMPLE_URL = 'https://huaban.com/boards/31714128/' #art
 HTML_ENCODING = 'utf8'
+IMAGE_DIR = 'huaban'
 
 
 img_host = { 
@@ -18,6 +20,7 @@ hbfile = {
 
 #import urllib,urllib2,sys,os,time,json
 import sys,os,time,json
+import requests
 import re
 from urllib.request import urlopen,urlretrieve
 
@@ -27,7 +30,7 @@ def writeToFile(data,filename):
     f.write(data)
     f.close
 
-def getPage(url,encoding=None):
+def getPage(url,encoding=HTML_ENCODING):
     res = urlopen(url) #open->res
     page = res.read()
     
@@ -38,37 +41,6 @@ def getPage(url,encoding=None):
         writeToFile(page,"dudehtml.html")
 
     return page
-
-#根据pin获取图片地址
-def getFileSrc(pin):
-    #pin是json里面的pin
-    bucket = pin['file']['bucket']
-    key = pin['file']['key']
-    base_url = img_host[bucket]
-    return "http://{0}/{1}".format(base_url,key)
-
-
-#根据pin获取图片扩展名,不带.
-def getFileExt(pin):
-    type = pin['file']['type']
-    type = type[type.index('/')+1:] #去掉 image/jpeg 前面的
-
-    type = type.lower()
-    if type == 'jpeg' or type == 'pjpeg':
-        return 'jpg'
-    else :
-        return type
-
-#将data的所有pin添加到pins
-def addToPins(data):
-    for p in data['pins']:
-        pin_id = p["pin_id"]
-        pin_src = getFileSrc(p)
-        pin_ext = getFileExt(p)
-
-        pin = (pin_id,pin_src,pin_ext)
-        global pins
-        pins.append(pin)
 
 #parse args to get target url
 def getUrlArg():
@@ -84,59 +56,83 @@ def getUrlArg():
         url = url + '/'
     return url
 
-
 def getBoardMeta(html):
     pinCount = int(re.search(r'收入([0-9]*)',html).group(1))
     boardName = re.search(r'class="board-name">(.*)</h1>',html).group(1)
 
     return pinCount,boardName
 
+
 class Pin:
-    id = 0
+    pinID = 0
     src = 'none'
-
-def main():
-    url = getUrlArg()
-    html = getPage(url,"utf8")
-    
-    pinCount, boardName = getBoardMeta(html)
-     IMAGE_DIR
-
-    pins = [] #(id,src,ext)
+    def __init__(self,_pinID,_src):
+        self.pinID = _pinID
+        self.src = _src
 
 
-    #首页的pins
-    addToPins(data)
+def extendPinList(html,pins):
+    print("Collecting pin info...")
+    pinPattern = r'<a href="/pins/([0-9]*)/" .*?<img src="//(.*?)" width'
+    matchList = re.findall(pinPattern,html)
+    for pinId, src in matchList:
+        src = "http://" + src.replace("hbimg.huabanimg.com","img.hb.aicdn.com")
+        pins.append(Pin(pinId,src))
 
-    page_num = pinCount/100 +1 #555个要加载6次
-    for i in range(1,page_num+1):
-        max = pins.pop()[0] #取pins的最后一个的id,同时删除最后一个,后面还要添加它
-        url = argUrl + '?max={0}&&limit=101'.format(max)
-        data = decodeJson(url)
-        addToPins(data)
+    print("Got more "+str(len(matchList))+" pins")
 
-    ########################################################################
-    #pins里面包含数据,开始下载
-    print(u"图片系列为 : {0}".format(title))
-    print(u"共{0}张图片,画板作者为 : {1}".format(count,username))
-    print('')
-    #image文件夹
+
+def createFolders(boardName):
     if not os.path.exists(IMAGE_DIR):
         os.mkdir(IMAGE_DIR)
-    #子文件夹
-    if not os.path.exists(IMAGE_DIR + "/" + title):
-        os.mkdir(IMAGE_DIR + "/" + title) #以title新建文件夹
+    
+    if not os.path.exists(IMAGE_DIR + "/" + boardName):
+        os.mkdir(IMAGE_DIR + "/" + boardName)
 
-    index = 1 #第几张图片
+
+def getImage (url, filename, pinID):
+    done = False
+    while not done:
+        try:
+            print("pin: " + str(pinID))
+            request = requests.get(url, timeout=10, stream=True)
+            with open(filename, 'wb') as fh:
+                for chunk in request.iter_content(1024 * 1024):
+                    fh.write(chunk)
+            done = True
+        except Exception as _:
+            print("Timeout: pin "+ str(pinID))
+       
+
+def main():
+    argURL = getUrlArg()
+    html = getPage(argURL)
+    
+    pinCount, boardName = getBoardMeta(html)
+    print("Board: "+boardName+ " | number: "+str(pinCount))
+
+    pins = [] #(id,src,ext)
+    extendPinList(html,pins)
+
+    page_num = int(pinCount/100) + 1
+
+    for _ in range(1, page_num+1):
+        lastPin = pins[-1].pinID 
+        url = argURL + '?max={0}&&limit=101'.format(lastPin)
+        html = getPage(url)
+        extendPinList(html,pins)
+
+    print("Got info for " + str(len(pins)) + " pins")
+    
+    createFolders(boardName);
+    
+    print("Downloading images")
     for p in pins:
-        #p = (id,src,ext)
-        num = "{0:0{1}}".format(index,len(str(count)))
-        ext = p[2] #jpg
-        src = p[1] #http://xxx
-        path = u"{0}/{1}/{2}.{3}".format(IMAGE_DIR,title,num,ext)
-        print(u"正在下载第{0}张 : {1}".format(num,src))     
-        urlretrieve(src,path)
-        index+=1
+        path = "{0}/{1}/{2}.{3}".format(IMAGE_DIR,boardName,p.pinID,"jpg") 
+        getImage(p.src, path,p.pinID)
+        # urlretrieve(p.src,path)
+
+    print("Done!")
 
 if __name__ == '__main__':
     main()
