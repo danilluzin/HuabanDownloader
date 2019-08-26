@@ -102,7 +102,7 @@ def getImage (url, filename, pinID):
     attempts = 10
     while not done:
         try:
-            request = requests.get(url, timeout=1, stream=True)
+            request = requests.get(url, timeout=10, stream=True)
             with open(filename, 'wb') as fh:
                 for chunk in request.iter_content(1024 * 1024):
                     fh.write(chunk)
