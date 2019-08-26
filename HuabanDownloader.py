@@ -1,8 +1,8 @@
 ##
 
-DEBUG = True 
-EXAMPLE_URL = 'https://huaban.com/boards/37528906/' #hair
-# EXAMPLE_URL = 'https://huaban.com/boards/48685125/' #mood
+DEBUG = False 
+# EXAMPLE_URL = 'https://huaban.com/boards/37528906/' #hair
+EXAMPLE_URL = 'https://huaban.com/boards/48685125/' #mood
 # EXAMPLE_URL = 'https://huaban.com/boards/31714128/' #art
 HTML_ENCODING = 'utf8'
 IMAGE_DIR = 'huaban'
@@ -76,7 +76,7 @@ def extendPinList(html,pins):
     pinPattern = r'<a href="/pins/([0-9]*)/" .*?<img src="//(.*?)" width'
     matchList = re.findall(pinPattern,html)
     for pinId, src in matchList:
-        src = "http://" + src.replace("hbimg.huabanimg.com","img.hb.aicdn.com")
+        src = "http://" + src.replace("hbimg.huabanimg.com","img.hb.aicdn.com").replace("_fw236","")
         pins.append(Pin(pinId,src))
 
     print("Got more "+str(len(matchList))+" pins")
@@ -91,17 +91,25 @@ def createFolders(boardName):
 
 
 def getImage (url, filename, pinID):
+    if os.path.exists(filename):
+        print("skipping [already downloaded]")
+        return
     done = False
+    attempts = 10
     while not done:
         try:
-            print("pin: " + str(pinID))
             request = requests.get(url, timeout=10, stream=True)
             with open(filename, 'wb') as fh:
                 for chunk in request.iter_content(1024 * 1024):
                     fh.write(chunk)
+                    attempts = 10
             done = True
         except Exception as _:
             print("Timeout: pin "+ str(pinID))
+            attempts = attempts - 1
+            if attempts==0 :
+                print("FAILED pin " + str(pinID))
+                return;
        
 
 def main():
@@ -127,8 +135,11 @@ def main():
     createFolders(boardName);
     
     print("Downloading images")
+    index = 0
     for p in pins:
-        path = "{0}/{1}/{2}.{3}".format(IMAGE_DIR,boardName,p.pinID,"jpg") 
+        index += 1
+        path = "{0}/{1}/{2}.{3}".format(IMAGE_DIR,boardName,p.pinID,"jpg")
+        print("pin: " + str(p.pinID)+"  | " +str(index) +"/" +str(pinCount)) 
         getImage(p.src, path,p.pinID)
         # urlretrieve(p.src,path)
 
