@@ -4,7 +4,7 @@ Python downloader script for Huaban ([huaban.com](huaban.com)) boards.
 A simple script for downloading every pin from a huaban board.
 
 * Images are saved into a `huaban\<board_title>` folder.
-* Script will skip images that were already downloaded on subsequent runs (makes it easy to rerun the script, if one or more pins fail). To redownload an existing image, just remove it from the target folder (`huaban\<board_title>`) before running script again
+* Script will skip images that were already downloaded on subsequent runs (makes it easy to rerun the script, if one or more pins fail). To redownload an existing image, just remove it from the target folder (`huaban\<board_title>`) before running the script again
 * If certain images fail to download (timeout) their list can be found in the `huaban\<board_title>\failReport.txt` file.
 
 
