@@ -76,7 +76,7 @@ FAILED_PINS = []
 
 def extendPinList(html,pins):
     print("Collecting pin info...")
-    pinPattern = r'<a href="/pins/([0-9]*)/" .*?<img src="//(.*?)" width'
+    pinPattern = r'<a class="img x layer-view" href="/pins/([0-9]*)/" .*?<img src="//(.*?)" width'
     matchList = re.findall(pinPattern,html)
     for pinId, src in matchList:
         src = "http://" + src.replace("hbimg.huabanimg.com","img.hb.aicdn.com") 
